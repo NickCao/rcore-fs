@@ -84,6 +84,10 @@ impl INode for DNode {
         self.node.get_entry(id)
     }
 
+    fn poll(&self) -> Result<PollStatus> {
+        self.node.poll()
+    }
+
     fn as_any_ref(&self) -> &dyn Any {
         self
     }
@@ -105,10 +109,6 @@ impl INode for DNode {
     /*
        Remote operations
     */
-
-    fn poll(&self) -> Result<PollStatus> {
-        self.node.poll()
-    }
 
     fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
         // FIXME
