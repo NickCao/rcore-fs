@@ -92,6 +92,15 @@ impl INode for DLocalNode {
         self
     }
 
+    fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
+        // when creating a new inode in a local directory
+        // the new inode is still local
+        match self.node.create(name, type_, mode) {
+            Ok(node) => Ok(DLocalNode::new(node)),
+            err => err,
+        }
+    }
+
     /*
        Local operations requiring special handling
     */
@@ -109,15 +118,6 @@ impl INode for DLocalNode {
     /*
        Remote operations
     */
-
-    fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
-        // FIXME
-        let node = self.node.create(name, type_, mode);
-        match node {
-            Ok(node) => Ok(Arc::new(DLocalNode { node })),
-            err => err,
-        }
-    }
 
     fn link(&self, name: &str, other: &Arc<dyn INode>) -> Result<()> {
         unimplemented!()
