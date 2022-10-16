@@ -48,24 +48,16 @@ impl DFS {
 }
 
 impl INode for DNode {
+    /*
+       Local operations
+    */
+
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize> {
         self.node.read_at(offset, buf)
     }
 
     fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize> {
         self.node.write_at(offset, buf)
-    }
-
-    fn poll(&self) -> Result<PollStatus> {
-        self.node.poll()
-    }
-
-    fn metadata(&self) -> Result<Metadata> {
-        self.node.metadata()
-    }
-
-    fn set_metadata(&self, metadata: &Metadata) -> Result<()> {
-        self.node.set_metadata(metadata)
     }
 
     fn sync_all(&self) -> Result<()> {
@@ -78,6 +70,34 @@ impl INode for DNode {
 
     fn resize(&self, len: usize) -> Result<()> {
         self.node.resize(len)
+    }
+
+    fn mmap(&self, area: MMapArea) -> Result<()> {
+        self.node.mmap(area)
+    }
+
+    fn io_control(&self, cmd: u32, data: usize) -> Result<usize> {
+        self.node.io_control(cmd, data)
+    }
+
+    fn as_any_ref(&self) -> &dyn Any {
+        self
+    }
+
+    /*
+       Remote operations
+    */
+
+    fn poll(&self) -> Result<PollStatus> {
+        self.node.poll()
+    }
+
+    fn metadata(&self) -> Result<Metadata> {
+        self.node.metadata()
+    }
+
+    fn set_metadata(&self, metadata: &Metadata) -> Result<()> {
+        self.node.set_metadata(metadata)
     }
 
     fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
@@ -110,20 +130,8 @@ impl INode for DNode {
         self.node.get_entry(id)
     }
 
-    fn io_control(&self, cmd: u32, data: usize) -> Result<usize> {
-        self.node.io_control(cmd, data)
-    }
-
-    fn mmap(&self, area: MMapArea) -> Result<()> {
-        self.node.mmap(area)
-    }
-
     fn fs(&self) -> Arc<dyn FileSystem> {
         // FIXME
         self.node.fs()
-    }
-
-    fn as_any_ref(&self) -> &dyn Any {
-        self
     }
 }
