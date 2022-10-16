@@ -1,0 +1,10 @@
+[package]
+name = "rcore-fs-dfs"
+version = "0.1.0"
+authors = ["Nick Cao <nickcao@nichi.co>"]
+edition = "2021"
+
+[dependencies]
+rcore-fs = { path = "../rcore-fs", features = ["std"] }
+nix = "0.23"
+log = "0.4"
