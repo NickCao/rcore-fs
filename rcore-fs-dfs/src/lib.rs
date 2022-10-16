@@ -14,11 +14,11 @@ pub struct DFS {
     store: Arc<dyn FileSystem>,
 }
 
-pub struct DNode {
+pub struct DLocalNode {
     node: Arc<dyn INode>,
 }
 
-impl DNode {
+impl DLocalNode {
     fn new(node: Arc<dyn INode>) -> Arc<Self> {
         Arc::new(Self { node })
     }
@@ -32,7 +32,7 @@ impl FileSystem for DFS {
 
     fn root_inode(&self) -> Arc<dyn INode> {
         // FIXME
-        DNode::new(self.store.root_inode())
+        DLocalNode::new(self.store.root_inode())
     }
 
     fn info(&self) -> FsInfo {
@@ -47,7 +47,7 @@ impl DFS {
     }
 }
 
-impl INode for DNode {
+impl INode for DLocalNode {
     /*
        Local operations
     */
@@ -114,7 +114,7 @@ impl INode for DNode {
         // FIXME
         let node = self.node.create(name, type_, mode);
         match node {
-            Ok(node) => Ok(Arc::new(DNode { node })),
+            Ok(node) => Ok(Arc::new(DLocalNode { node })),
             err => err,
         }
     }
