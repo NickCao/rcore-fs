@@ -80,8 +80,26 @@ impl INode for DNode {
         self.node.io_control(cmd, data)
     }
 
+    fn get_entry(&self, id: usize) -> Result<String> {
+        self.node.get_entry(id)
+    }
+
     fn as_any_ref(&self) -> &dyn Any {
         self
+    }
+
+    /*
+       Local operations requiring special handling
+    */
+
+    fn metadata(&self) -> Result<Metadata> {
+        // TODO: could use some metadata rewrites
+        self.node.metadata()
+    }
+
+    fn set_metadata(&self, metadata: &Metadata) -> Result<()> {
+        // TODO: could use some metadata rewrites
+        self.node.set_metadata(metadata)
     }
 
     /*
@@ -90,14 +108,6 @@ impl INode for DNode {
 
     fn poll(&self) -> Result<PollStatus> {
         self.node.poll()
-    }
-
-    fn metadata(&self) -> Result<Metadata> {
-        self.node.metadata()
-    }
-
-    fn set_metadata(&self, metadata: &Metadata) -> Result<()> {
-        self.node.set_metadata(metadata)
     }
 
     fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
@@ -124,10 +134,6 @@ impl INode for DNode {
     fn find(&self, name: &str) -> Result<Arc<dyn INode>> {
         // FIXME
         self.node.find(name)
-    }
-
-    fn get_entry(&self, id: usize) -> Result<String> {
-        self.node.get_entry(id)
     }
 
     fn fs(&self) -> Arc<dyn FileSystem> {
