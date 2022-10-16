@@ -5,3 +5,5 @@ Cargo.lock
 /*.img
 *.swp
 *.iml
+/.direnv/
+/.envrc
