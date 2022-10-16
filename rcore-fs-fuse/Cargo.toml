@@ -8,7 +8,7 @@ edition = "2018"
 use_fuse = ["fuse"]
 
 [dependencies]
-time = "0.3"
+time = "0.1"
 libc = "0.2"
 log = "0.4"
 fuse = { version = "0.3", optional = true }
