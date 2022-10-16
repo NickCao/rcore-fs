@@ -24,6 +24,16 @@ impl DLocalNode {
     }
 }
 
+pub struct DRemoteNode {
+    node: Arc<dyn INode>,
+}
+
+impl DRemoteNode {
+    fn new(node: Arc<dyn INode>) -> Arc<Self> {
+        Arc::new(Self { node })
+    }
+}
+
 impl FileSystem for DFS {
     fn sync(&self) -> Result<()> {
         // FIXME
@@ -95,10 +105,8 @@ impl INode for DLocalNode {
     fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
         // when creating a new inode in a local directory
         // the new inode is still local
-        match self.node.create(name, type_, mode) {
-            Ok(node) => Ok(DLocalNode::new(node)),
-            err => err,
-        }
+        assert_ne!(type_, FileType::Shadow);
+        Ok(DLocalNode::new(self.node.create(name, type_, mode)?))
     }
 
     /*
@@ -119,25 +127,54 @@ impl INode for DLocalNode {
        Remote operations
     */
 
+    fn find(&self, name: &str) -> Result<Arc<dyn INode>> {
+        let node = self.node.find(name)?;
+        Ok(match node.metadata()?.type_ {
+            // for shadow inodes, we create a remote node
+            FileType::Shadow => DRemoteNode::new(node),
+            // for others, we create a local node
+            _ => DLocalNode::new(node),
+        })
+    }
+
     fn link(&self, name: &str, other: &Arc<dyn INode>) -> Result<()> {
-        unimplemented!()
+        match other.metadata()?.type_ {
+            // TODO: figure out how to link shadow inodes
+            FileType::Shadow => unimplemented!(),
+            _ => self.node.link(name, other),
+        }
     }
 
     fn unlink(&self, name: &str) -> Result<()> {
-        unimplemented!()
+        // FIXME: handle the case when the link is remote
+        self.node.unlink(name)
     }
 
     fn move_(&self, old_name: &str, target: &Arc<dyn INode>, new_name: &str) -> Result<()> {
-        unimplemented!()
-    }
-
-    fn find(&self, name: &str) -> Result<Arc<dyn INode>> {
-        // FIXME
-        self.node.find(name)
+        match target.metadata()?.type_ {
+            // TODO: figure out how to move to remote
+            FileType::Shadow => unimplemented!(),
+            _ => self.node.move_(old_name, target, new_name),
+        }
     }
 
     fn fs(&self) -> Arc<dyn FileSystem> {
         // FIXME
         self.node.fs()
+    }
+}
+
+impl INode for DRemoteNode {
+    fn read_at(&self, _offset: usize, _buf: &mut [u8]) -> Result<usize> {
+        unimplemented!()
+    }
+    fn write_at(&self, _offset: usize, _buf: &[u8]) -> Result<usize> {
+        unimplemented!()
+    }
+    fn poll(&self) -> Result<PollStatus> {
+        unimplemented!()
+    }
+    fn as_any_ref(&self) -> &dyn Any {
+        self
     }
 }
