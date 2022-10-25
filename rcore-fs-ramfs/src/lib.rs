@@ -70,8 +70,6 @@ impl RamFS {
         root.parent = Arc::downgrade(&fs.root);
         root.this = Arc::downgrade(&fs.root);
         root.fs = Arc::downgrade(&fs);
-        root.extra.inode =
-            Arc::into_raw(root.this.upgrade().unwrap()) as *const RamFSINode as usize;
         drop(root);
         fs
     }
