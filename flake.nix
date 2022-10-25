@@ -11,6 +11,7 @@
           devShells.default = mkShell {
             nativeBuildInputs = [ rustc cargo rustfmt rust-analyzer pkg-config ];
             buildInputs = [ fuse ];
+            RUSTC_BOOTSTRAP = 1;
           };
         }
       );

@@ -15,12 +15,13 @@ pub struct DFS {
 }
 
 pub struct DLocalNode {
+    nid: usize,
     node: Arc<dyn INode>,
 }
 
 impl DLocalNode {
-    fn new(node: Arc<dyn INode>) -> Arc<Self> {
-        Arc::new(Self { node })
+    fn new(nid: usize, node: Arc<dyn INode>) -> Arc<Self> {
+        Arc::new(Self { nid, node })
     }
 }
 
@@ -42,7 +43,7 @@ impl FileSystem for DFS {
 
     fn root_inode(&self) -> Arc<dyn INode> {
         // FIXME
-        DLocalNode::new(self.store.root_inode())
+        DLocalNode::new(self.nid, self.store.root_inode())
     }
 
     fn info(&self) -> FsInfo {
@@ -106,7 +107,10 @@ impl INode for DLocalNode {
         // when creating a new inode in a local directory
         // the new inode is still local
         assert_ne!(type_, FileType::Shadow);
-        Ok(DLocalNode::new(self.node.create(name, type_, mode)?))
+        Ok(DLocalNode::new(
+            self.nid,
+            self.node.create(name, type_, mode)?,
+        ))
     }
 
     /*
@@ -115,11 +119,17 @@ impl INode for DLocalNode {
 
     fn metadata(&self) -> Result<Metadata> {
         // TODO: could use some metadata rewrites
-        self.node.metadata()
+        let meta = self.node.metadata()?;
+        // only support low inode numbers
+        assert_eq!(meta.inode & 0xffffffff00000000, 0);
+        Ok(Metadata {
+            // concat inode number with nodeid
+            inode: (meta.inode & 0x00000000ffffffff) + (self.nid << 32),
+            ..meta
+        })
     }
 
     fn set_metadata(&self, metadata: &Metadata) -> Result<()> {
-        // TODO: could use some metadata rewrites
         self.node.set_metadata(metadata)
     }
 
@@ -133,7 +143,7 @@ impl INode for DLocalNode {
             // for shadow inodes, we create a remote node
             FileType::Shadow => DRemoteNode::new(node),
             // for others, we create a local node
-            _ => DLocalNode::new(node),
+            _ => DLocalNode::new(self.nid, node),
         })
     }
 
