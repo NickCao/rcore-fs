@@ -118,7 +118,6 @@ impl INode for DLocalNode {
     */
 
     fn metadata(&self) -> Result<Metadata> {
-        // TODO: could use some metadata rewrites
         let meta = self.node.metadata()?;
         // only support low inode numbers
         assert_eq!(meta.inode & 0xffffffff00000000, 0);
@@ -148,9 +147,12 @@ impl INode for DLocalNode {
     }
 
     fn link(&self, name: &str, other: &Arc<dyn INode>) -> Result<()> {
-        match other.metadata()?.type_ {
-            // TODO: figure out how to link shadow inodes
-            FileType::Shadow => unimplemented!(),
+        let meta = other.metadata()?;
+        match meta.type_ {
+            // for shadow inodes, we create another shadow inode
+            FileType::Shadow => self
+                .create(name, FileType::Shadow, meta.mode.into())
+                .map(|_| ()),
             _ => self.node.link(name, other),
         }
     }
