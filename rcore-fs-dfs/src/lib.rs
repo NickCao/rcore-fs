@@ -1,13 +1,7 @@
 use core::any::Any;
 use rcore_fs::vfs::*;
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
 use std::string::String;
-use std::sync::{Arc, Weak};
-use std::sync::{Mutex, MutexGuard};
-
-#[macro_use]
-extern crate log;
+use std::sync::Arc;
 
 pub struct DFS {
     nid: usize,
