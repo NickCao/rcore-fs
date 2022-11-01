@@ -279,7 +279,6 @@ pub enum FileType {
     BlockDevice,
     NamedPipe,
     Socket,
-    Shadow,
 }
 
 /// Metadata of FileSystem
