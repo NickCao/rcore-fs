@@ -7,6 +7,7 @@ use std::sync::Arc;
 pub mod local;
 pub mod remote;
 pub mod transport;
+pub mod store;
 
 pub struct DFS {
     nid: usize,
