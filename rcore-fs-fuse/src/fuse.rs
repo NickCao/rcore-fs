@@ -60,7 +60,6 @@ impl VfsFuse {
             vfs::FileType::BlockDevice => FileType::BlockDevice,
             vfs::FileType::NamedPipe => FileType::NamedPipe,
             vfs::FileType::Socket => FileType::Socket,
-            vfs::FileType::Shadow => FileType::RegularFile,
         }
     }
     fn trans_error(err: vfs::FsError) -> i32 {

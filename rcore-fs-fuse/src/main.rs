@@ -70,10 +70,6 @@ fn main() {
     };
 
     let fs: Arc<dyn FileSystem> = match opt.fs.as_str() {
-        "dfs" => {
-            let store = ramfs::RamFS::new();
-            rcore_fs_dfs::DFS::new(0, 0, store)
-        }
         "sfs" => {
             let file = OpenOptions::new()
                 .read(true)
