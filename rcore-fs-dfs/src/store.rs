@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Mutex};
+
+use crate::transport::Transport;
 
 pub trait Store {
     fn put(&mut self, key: &[u8], value: &[u8]) -> std::io::Result<()>;
@@ -17,6 +19,23 @@ impl Store for HashMap<Vec<u8>, Vec<u8>> {
     fn delete(&mut self, key: &[u8]) -> std::io::Result<()> {
         self.remove(key);
         Ok(())
+    }
+}
+
+struct DistributedStore {
+    tranport: Mutex<Box<dyn Transport>>,
+    store: Mutex<Box<dyn Store>>,
+}
+
+impl Store for DistributedStore {
+    fn put(&mut self, key: &[u8], value: &[u8]) -> std::io::Result<()> {
+        unimplemented!()
+    }
+    fn get(&mut self, key: &[u8]) -> std::io::Result<Option<Vec<u8>>> {
+        unimplemented!()
+    }
+    fn delete(&mut self, key: &[u8]) -> std::io::Result<()> {
+        unimplemented!()
     }
 }
 
