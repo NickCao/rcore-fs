@@ -62,7 +62,6 @@ impl INode for DLocalNode {
     fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
         // when creating a new inode in a local directory
         // the new inode is still local
-        assert_ne!(type_, FileType::Shadow);
         Ok(DLocalNode::new(
             self.nid,
             self.node.create(name, type_, mode)?,
@@ -96,21 +95,13 @@ impl INode for DLocalNode {
         let node = self.node.find(name)?;
         Ok(match node.metadata()?.type_ {
             // for shadow inodes, we create a remote node
-            FileType::Shadow => DRemoteNode::new(node),
             // for others, we create a local node
             _ => DLocalNode::new(self.nid, node),
         })
     }
 
     fn link(&self, name: &str, other: &Arc<dyn INode>) -> Result<()> {
-        let meta = other.metadata()?;
-        match meta.type_ {
-            // for shadow inodes, we create another shadow inode
-            FileType::Shadow => self
-                .create(name, FileType::Shadow, meta.mode.into())
-                .map(|_| ()),
-            _ => self.node.link(name, other),
-        }
+        unimplemented!()
     }
 
     fn unlink(&self, name: &str) -> Result<()> {
@@ -121,7 +112,6 @@ impl INode for DLocalNode {
     fn move_(&self, old_name: &str, target: &Arc<dyn INode>, new_name: &str) -> Result<()> {
         match target.metadata()?.type_ {
             // TODO: figure out how to move to remote
-            FileType::Shadow => unimplemented!(),
             _ => self.node.move_(old_name, target, new_name),
         }
     }

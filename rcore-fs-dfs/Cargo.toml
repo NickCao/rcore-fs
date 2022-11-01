@@ -6,5 +6,9 @@ edition = "2021"
 
 [dependencies]
 rcore-fs = { path = "../rcore-fs", features = ["std"] }
+rcore-fs-fuse = { path = "../rcore-fs-fuse", features = ["use_fuse"] }
+rcore-fs-ramfs = { path = "../rcore-fs-ramfs" }
 nix = "0.23"
 log = "0.4"
+structopt = "0.3"
+fuse = "0.3"
