@@ -1,21 +1,35 @@
 use std::collections::HashMap;
 
 pub trait Store {
-    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&mut self, key: K, value: V) -> std::io::Result<()>;
-    fn get<K: AsRef<[u8]>>(&mut self, key: K) -> std::io::Result<Option<Vec<u8>>>;
-    fn delete<K: AsRef<[u8]>>(&mut self, key: K) -> std::io::Result<()>;
+    fn put(&mut self, key: &[u8], value: &[u8]) -> std::io::Result<()>;
+    fn get(&mut self, key: &[u8]) -> std::io::Result<Option<Vec<u8>>>;
+    fn delete(&mut self, key: &[u8]) -> std::io::Result<()>;
 }
 
 impl Store for HashMap<Vec<u8>, Vec<u8>> {
-    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&mut self, key: K, value: V) -> std::io::Result<()> {
-        self.insert(key.as_ref().to_vec(), value.as_ref().to_vec());
+    fn put(&mut self, key: &[u8], value: &[u8]) -> std::io::Result<()> {
+        self.insert(key.to_vec(), value.to_vec());
         Ok(())
     }
-    fn get<K: AsRef<[u8]>>(&mut self, key: K) -> std::io::Result<Option<Vec<u8>>> {
-        Ok(HashMap::get(self, key.as_ref()).map(|value| value.clone()))
+    fn get(&mut self, key: &[u8]) -> std::io::Result<Option<Vec<u8>>> {
+        Ok(HashMap::get(self, key).map(|value| value.clone()))
     }
-    fn delete<K: AsRef<[u8]>>(&mut self, key: K) -> std::io::Result<()> {
-        self.remove(key.as_ref());
+    fn delete(&mut self, key: &[u8]) -> std::io::Result<()> {
+        self.remove(key);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Store;
+    use std::collections::HashMap;
+    #[test]
+    fn simple() {
+        let mut store: Box<dyn Store> = Box::new(HashMap::new());
+        store.put(b"foo", b"bar").unwrap();
+        assert_eq!(store.get(b"foo").unwrap().unwrap(), b"bar");
+        store.delete(b"foo").unwrap();
+        assert_eq!(store.get(b"foo").unwrap(), None);
     }
 }
