@@ -1,9 +1,12 @@
 use core::any::Any;
 use rcore_fs::vfs::*;
+use std::collections::HashMap;
 use std::string::String;
 use std::sync::Arc;
+
 pub mod local;
 pub mod remote;
+pub mod transport;
 
 pub struct DFS {
     nid: usize,
