@@ -3,26 +3,27 @@ use rcore_fs::vfs::*;
 use std::string::String;
 use std::sync::Arc;
 
-pub struct DRemoteNode {
-    node: Arc<dyn INode>,
+pub struct DINode {
+    nid: u64,
+    bid: u64,
 }
 
-impl DRemoteNode {
-    pub fn new(node: Arc<dyn INode>) -> Arc<Self> {
-        Arc::new(Self { node })
+impl DINode {
+    pub fn new(nid: u64, bid: u64) -> Arc<Self> {
+        Arc::new(Self { nid, bid })
     }
 }
 
-impl INode for DRemoteNode {
+impl rcore_fs::vfs::INode for DINode {
     /*
        Local operations
     */
 
-    fn read_at(&self, _offset: usize, _buf: &mut [u8]) -> Result<usize> {
+    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize> {
         unimplemented!()
     }
 
-    fn write_at(&self, _offset: usize, _buf: &[u8]) -> Result<usize> {
+    fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize> {
         unimplemented!()
     }
 
@@ -34,19 +35,19 @@ impl INode for DRemoteNode {
         unimplemented!()
     }
 
-    fn resize(&self, _len: usize) -> Result<()> {
+    fn resize(&self, len: usize) -> Result<()> {
         unimplemented!()
     }
 
-    fn mmap(&self, _area: MMapArea) -> Result<()> {
+    fn mmap(&self, area: MMapArea) -> Result<()> {
         unimplemented!()
     }
 
-    fn io_control(&self, _cmd: u32, _data: usize) -> Result<usize> {
+    fn io_control(&self, cmd: u32, data: usize) -> Result<usize> {
         unimplemented!()
     }
 
-    fn get_entry(&self, _id: usize) -> Result<String> {
+    fn get_entry(&self, id: usize) -> Result<String> {
         unimplemented!()
     }
 
@@ -58,7 +59,7 @@ impl INode for DRemoteNode {
         self
     }
 
-    fn create(&self, _name: &str, _type_: FileType, _mode: u32) -> Result<Arc<dyn INode>> {
+    fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
         unimplemented!()
     }
 
@@ -70,7 +71,7 @@ impl INode for DRemoteNode {
         unimplemented!()
     }
 
-    fn set_metadata(&self, _metadata: &Metadata) -> Result<()> {
+    fn set_metadata(&self, metadata: &Metadata) -> Result<()> {
         unimplemented!()
     }
 
@@ -78,19 +79,19 @@ impl INode for DRemoteNode {
        Remote operations
     */
 
-    fn find(&self, _name: &str) -> Result<Arc<dyn INode>> {
+    fn find(&self, name: &str) -> Result<Arc<dyn INode>> {
         unimplemented!()
     }
 
-    fn link(&self, _name: &str, _other: &Arc<dyn INode>) -> Result<()> {
+    fn link(&self, name: &str, other: &Arc<dyn INode>) -> Result<()> {
         unimplemented!()
     }
 
-    fn unlink(&self, _name: &str) -> Result<()> {
+    fn unlink(&self, name: &str) -> Result<()> {
         unimplemented!()
     }
 
-    fn move_(&self, _old_name: &str, _target: &Arc<dyn INode>, _new_name: &str) -> Result<()> {
+    fn move_(&self, old_name: &str, target: &Arc<dyn INode>, new_name: &str) -> Result<()> {
         unimplemented!()
     }
 

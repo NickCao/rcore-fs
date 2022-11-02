@@ -1,15 +1,11 @@
-use core::any::Any;
 use rcore_fs::vfs::*;
-use std::collections::HashMap;
-use std::string::String;
 use std::sync::Arc;
 
-pub mod local;
-pub mod remote;
+pub mod inode;
 pub mod transport;
 
 pub struct DFS {
-    nid: usize,
+    nid: u64,
     store: Arc<dyn FileSystem>,
 }
 
@@ -21,7 +17,7 @@ impl FileSystem for DFS {
 
     fn root_inode(&self) -> Arc<dyn INode> {
         // FIXME
-        local::DLocalNode::new(self.nid, self.store.root_inode())
+        inode::DINode::new(0, 0)
     }
 
     fn info(&self) -> FsInfo {
@@ -31,7 +27,7 @@ impl FileSystem for DFS {
 }
 
 impl DFS {
-    pub fn new(nid: usize, rid: usize, store: Arc<dyn FileSystem>) -> Arc<DFS> {
+    pub fn new(nid: u64, store: Arc<dyn FileSystem>) -> Arc<DFS> {
         Arc::new(DFS { nid, store })
     }
 }
