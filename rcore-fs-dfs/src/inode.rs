@@ -2,6 +2,7 @@ use crate::transport::{self, Transport};
 use core::any::Any;
 use rcore_fs::vfs::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::string::String;
 use std::sync::Arc;
 use std::usize;
@@ -14,7 +15,7 @@ pub struct DINode {
     bid: u64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub enum DFileType {
     File,
     Dir,
@@ -25,10 +26,11 @@ pub enum DFileType {
     Socket,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DMetadata {
     pub type_: DFileType,
     pub mode: u16,
+    pub entries: Vec<(String, (u64, u64))>,
 }
 
 impl DINode {
@@ -40,8 +42,9 @@ impl DINode {
                     nid,
                     bid,
                     &bincode::serialize(&DMetadata {
-                        mode: 0o0755,
+                        mode: 0o777,
                         type_: DFileType::Dir,
+                        entries: vec![],
                     })
                     .unwrap(),
                 )
@@ -85,7 +88,27 @@ impl rcore_fs::vfs::INode for DINode {
     }
 
     fn get_entry(&self, id: usize) -> Result<String> {
-        Err(FsError::EntryNotFound)
+        println!("get_entry: {}", id);
+
+        let mut buf = vec![0u8; MAX_INODE_SIZE];
+        let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
+        let meta: DMetadata = bincode::deserialize(&buf[..n]).unwrap();
+
+        if meta.type_ != DFileType::Dir {
+            return Err(FsError::NotDir);
+        }
+
+        match id {
+            0 => Ok(".".to_string()),
+            1 => Ok("..".to_string()),
+            id => {
+                if let Some(ent) = meta.entries.iter().nth(id - 2) {
+                    Ok(ent.0.to_string())
+                } else {
+                    Err(FsError::EntryNotFound)
+                }
+            }
+        }
     }
 
     fn poll(&self) -> Result<PollStatus> {
@@ -105,12 +128,15 @@ impl rcore_fs::vfs::INode for DINode {
     */
 
     fn metadata(&self) -> Result<Metadata> {
+        println!("metadata: {} {}", self.nid, self.bid);
+
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
         let meta: DMetadata = bincode::deserialize(&buf[..n]).unwrap();
+
         Ok(Metadata {
             dev: 0,
-            inode: 0,
+            inode: self.bid as usize, // synth a better inode number
             size: 0,
             blk_size: 0,
             blocks: 0,
@@ -125,7 +151,7 @@ impl rcore_fs::vfs::INode for DINode {
             nlinks: 1,
             uid: 0,
             gid: 0,
-            rdev: 0,
+            rdev: 1,
         })
     }
 
@@ -138,7 +164,27 @@ impl rcore_fs::vfs::INode for DINode {
     */
 
     fn find(&self, name: &str) -> Result<Arc<dyn INode>> {
-        unimplemented!()
+        println!("find: {}", name);
+
+        let mut buf = vec![0u8; MAX_INODE_SIZE];
+        let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
+        let meta: DMetadata = bincode::deserialize(&buf[..n]).unwrap();
+
+        if meta.type_ != DFileType::Dir {
+            return Err(FsError::NotDir);
+        }
+
+        match name {
+            "." => Ok(DINode::new(self.trans.clone(), self.nid, self.bid)),
+            ".." => Ok(DINode::new(self.trans.clone(), 0, 0)), // FIXME
+            name => {
+                if let Some(ent) = meta.entries.iter().find(|(n, _)| n == name) {
+                    Ok(DINode::new(self.trans.clone(), ent.1 .0, ent.1 .1))
+                } else {
+                    Err(FsError::EntryNotFound)
+                }
+            }
+        }
     }
 
     fn link(&self, name: &str, other: &Arc<dyn INode>) -> Result<()> {
