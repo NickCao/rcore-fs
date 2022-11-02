@@ -29,14 +29,34 @@ struct DistributedStore {
 
 impl Store for DistributedStore {
     fn put(&mut self, key: &[u8], value: &[u8]) -> std::io::Result<()> {
-        unimplemented!()
+        if self.tranport.lock().unwrap().id() == 0 {
+            self.store.lock().unwrap().put(key, value)
+        } else {
+            unimplemented!()
+        }
     }
     fn get(&mut self, key: &[u8]) -> std::io::Result<Option<Vec<u8>>> {
-        unimplemented!()
+        if self.tranport.lock().unwrap().id() == 0 {
+            self.store.lock().unwrap().get(key)
+        } else {
+            unimplemented!()
+        }
     }
     fn delete(&mut self, key: &[u8]) -> std::io::Result<()> {
-        unimplemented!()
+        if self.tranport.lock().unwrap().id() == 0 {
+            self.store.lock().unwrap().delete(key)
+        } else {
+            unimplemented!()
+        }
     }
+}
+
+#[repr(C)]
+#[non_exhaustive]
+enum Operation<'a, 'b> {
+    Put(&'a [u8], &'b [u8]),
+    Get(&'a [u8]),
+    Delete(&'a [u8]),
 }
 
 #[cfg(test)]

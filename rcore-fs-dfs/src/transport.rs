@@ -1,8 +1,7 @@
 use std::{
-    collections::VecDeque,
     io::{Read, Write},
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
-    sync::{Arc, Mutex},
+    usize,
 };
 
 pub trait Transport {
@@ -10,37 +9,48 @@ pub trait Transport {
     fn id(&mut self) -> usize;
     /// get nude number
     fn size(&mut self) -> usize;
-    /// send message
-    fn send(&mut self, id: usize, message: &[u8]) -> std::io::Result<usize>;
-    /// recv message
-    fn recv(&mut self, message: &mut [u8]) -> std::io::Result<usize>;
+    /// exchange message
+    fn exchange(
+        &mut self,
+        id: usize,
+        request: &[u8],
+        response: &mut [u8],
+    ) -> std::io::Result<usize>;
 }
 
 pub struct LoopbackTransport {
     id: usize,
     size: usize,
     base: u16,
-    backlog: Arc<Mutex<VecDeque<Vec<u8>>>>,
     _handle: std::thread::JoinHandle<()>,
 }
 
 impl LoopbackTransport {
-    pub fn new(id: usize, size: usize, base: u16) -> std::io::Result<Self> {
-        let backlog = Arc::new(Mutex::new(VecDeque::new()));
+    pub fn new(
+        id: usize,
+        size: usize,
+        base: u16,
+        mut callback: Box<dyn FnMut(&[u8], &mut [u8]) -> std::io::Result<usize> + Send>,
+    ) -> std::io::Result<Self> {
         let listener = std::net::TcpListener::bind(SocketAddr::V4(SocketAddrV4::new(
             Ipv4Addr::new(127, 0, 0, 1),
             base + id as u16,
         )))?;
         let handle = {
-            let backlog = backlog.clone();
             std::thread::spawn(move || {
                 for stream in listener.incoming() {
                     let mut stream = stream.unwrap();
-                    let mut size = [0u8; 8];
+
+                    let mut size = 0usize.to_be_bytes();
                     stream.read_exact(&mut size).unwrap();
-                    let mut buf = vec![0u8; usize::from_be_bytes(size)];
-                    stream.read_exact(&mut buf).unwrap();
-                    backlog.lock().unwrap().push_back(buf);
+                    let mut request = vec![0u8; usize::from_be_bytes(size)];
+                    stream.read_exact(&mut request).unwrap();
+
+                    let mut response = vec![0u8; 4096];
+                    let n = callback(&request, &mut response).unwrap();
+
+                    stream.write_all(&n.to_be_bytes()).unwrap();
+                    stream.write_all(&response[..n]).unwrap();
                 }
             })
         };
@@ -48,7 +58,6 @@ impl LoopbackTransport {
             id,
             size,
             base,
-            backlog,
             _handle: handle,
         })
     }
@@ -61,39 +70,53 @@ impl Transport for LoopbackTransport {
     fn size(&mut self) -> usize {
         self.size
     }
-    fn send(&mut self, id: usize, message: &[u8]) -> std::io::Result<usize> {
+    fn exchange(
+        &mut self,
+        id: usize,
+        request: &[u8],
+        response: &mut [u8],
+    ) -> std::io::Result<usize> {
         let mut stream = std::net::TcpStream::connect(SocketAddr::V4(SocketAddrV4::new(
             Ipv4Addr::new(127, 0, 0, 1),
             self.base + id as u16,
         )))?;
-        stream.write(&message.len().to_be_bytes())?;
-        stream.write(message)
-    }
-    fn recv(&mut self, mut message: &mut [u8]) -> std::io::Result<usize> {
-        if let Some(msg) = self.backlog.lock().unwrap().pop_front() {
-            message.write(&msg)
-        } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "no message available",
-            ))
+        // | size | request |
+        stream.write_all(&request.len().to_be_bytes())?;
+        stream.write_all(request)?;
+        // | size | response |
+        let mut size = 0usize.to_be_bytes();
+        stream.read_exact(&mut size)?;
+        let size = usize::from_be_bytes(size);
+        if size > response.len() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "response buffer too small",
+            ));
         }
+        stream.read_exact(&mut response[..size])?;
+        Ok(size)
     }
 }
 
 #[cfg(test)]
 mod test {
     use crate::transport::{LoopbackTransport, Transport};
-    use std::time::Duration;
     #[test]
     fn send() {
-        let message = "hello".as_bytes();
-        let mut tp1 = LoopbackTransport::new(0, 2, 3000).unwrap();
-        let mut tp2 = LoopbackTransport::new(1, 2, 3000).unwrap();
-        tp1.send(1, message).unwrap();
-        std::thread::sleep(Duration::from_secs(1));
-        let mut buf = vec![0u8; 4096];
-        let n = tp2.recv(&mut buf).unwrap();
-        assert_eq!(message, &buf[..n]);
+        static MESSAGE: &[u8] = "hello".as_bytes();
+        let mut tp1 = LoopbackTransport::new(0, 2, 3000, Box::new(|_, _| unreachable!())).unwrap();
+        LoopbackTransport::new(
+            1,
+            2,
+            3000,
+            Box::new(|request, response| {
+                response[..request.len()].copy_from_slice(request);
+                Ok(request.len())
+            }),
+        )
+        .unwrap();
+        let mut buf = [0u8; 4096];
+        let n = tp1.exchange(1, MESSAGE, &mut buf).unwrap();
+        assert_eq!(MESSAGE, &buf[..n]);
     }
 }
