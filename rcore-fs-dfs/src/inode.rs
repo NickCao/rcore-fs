@@ -36,7 +36,7 @@ pub struct DMetadata {
 impl DINode {
     pub fn new(trans: Arc<dyn Transport>, nid: u64, bid: u64) -> Arc<Self> {
         let mut buf = vec![0u8; MAX_INODE_SIZE];
-        if trans.get(nid, bid, &mut buf).is_err() {
+        if nid == 0 && bid == 0 && trans.get(nid, bid, &mut buf).is_err() {
             trans
                 .set(
                     nid,
@@ -68,11 +68,11 @@ impl rcore_fs::vfs::INode for DINode {
     }
 
     fn sync_all(&self) -> Result<()> {
-        unimplemented!()
+        Ok(())
     }
 
     fn sync_data(&self) -> Result<()> {
-        unimplemented!()
+        Ok(())
     }
 
     fn resize(&self, len: usize) -> Result<()> {
@@ -120,7 +120,33 @@ impl rcore_fs::vfs::INode for DINode {
     }
 
     fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
-        unimplemented!()
+        let nid = self.nid;
+        let bid = self.trans.next();
+        self.trans
+            .set(
+                nid,
+                bid,
+                &bincode::serialize(&DMetadata {
+                    mode: mode as u16,
+                    type_: match type_ {
+                        FileType::Dir => DFileType::Dir,
+                        FileType::File => DFileType::File,
+                        _ => unimplemented!(),
+                    },
+                    entries: vec![],
+                })
+                .unwrap(),
+            )
+            .unwrap();
+
+        let mut buf = vec![0u8; MAX_INODE_SIZE];
+        let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
+        let mut meta: DMetadata = bincode::deserialize(&buf[..n]).unwrap();
+        meta.entries.push((name.to_string(), (nid, bid)));
+        self.trans
+            .set(self.nid, self.bid, &bincode::serialize(&meta).unwrap())
+            .unwrap();
+        Ok(DINode::new(self.trans.clone(), nid, bid))
     }
 
     /*
@@ -145,6 +171,7 @@ impl rcore_fs::vfs::INode for DINode {
             ctime: Timespec { sec: 0, nsec: 0 },
             type_: match meta.type_ {
                 DFileType::Dir => FileType::Dir,
+                DFileType::File => FileType::File,
                 _ => unreachable!(),
             },
             mode: meta.mode,

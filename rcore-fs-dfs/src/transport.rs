@@ -6,11 +6,14 @@ use std::{
     usize,
 };
 
+use rand::RngCore;
+
 pub trait Transport: Send + Sync {
     fn nid(&self) -> u64;
     fn len(&self) -> u64;
     fn get(&self, nid: u64, bid: u64, buf: &mut [u8]) -> std::io::Result<usize>;
     fn set(&self, nid: u64, bid: u64, buf: &[u8]) -> std::io::Result<()>;
+    fn next(&self) -> u64;
 }
 
 pub struct LoopbackTransport {
@@ -147,6 +150,9 @@ impl Transport for LoopbackTransport {
             Ok(())
         }
     }
+    fn next(&self) -> u64 {
+        rand::thread_rng().next_u64()
+    }
 }
 
 #[cfg(test)]
@@ -154,8 +160,8 @@ mod test {
     use crate::transport::{LoopbackTransport, Transport};
     #[test]
     fn transport() {
-        let mut t1 = LoopbackTransport::new(0, 2, 3000).unwrap();
-        let mut t2 = LoopbackTransport::new(1, 2, 3000).unwrap();
+        let t1 = LoopbackTransport::new(0, 2, 3000).unwrap();
+        let t2 = LoopbackTransport::new(1, 2, 3000).unwrap();
         t1.set(0, 1, b"foo").unwrap();
         t1.set(1, 1, b"bar").unwrap();
         t2.set(0, 2, b"baz").unwrap();
