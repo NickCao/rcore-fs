@@ -1,11 +1,13 @@
+use crate::transport::Transport;
 use rcore_fs::vfs::*;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 pub mod inode;
 pub mod transport;
 
 pub struct DFS {
-    nid: u64,
+    trans: Arc<dyn Transport>,
     store: Arc<dyn FileSystem>,
 }
 
@@ -17,7 +19,7 @@ impl FileSystem for DFS {
 
     fn root_inode(&self) -> Arc<dyn INode> {
         // FIXME
-        inode::DINode::new(0, 0)
+        inode::DINode::new(self.trans.clone(), 0, 0)
     }
 
     fn info(&self) -> FsInfo {
@@ -27,7 +29,7 @@ impl FileSystem for DFS {
 }
 
 impl DFS {
-    pub fn new(nid: u64, store: Arc<dyn FileSystem>) -> Arc<DFS> {
-        Arc::new(DFS { nid, store })
+    pub fn new(trans: Arc<dyn Transport>, store: Arc<dyn FileSystem>) -> Arc<DFS> {
+        Arc::new(DFS { trans, store })
     }
 }

@@ -1,16 +1,18 @@
+use crate::transport::Transport;
 use core::any::Any;
 use rcore_fs::vfs::*;
 use std::string::String;
 use std::sync::Arc;
 
 pub struct DINode {
+    trans: Arc<dyn Transport>,
     nid: u64,
     bid: u64,
 }
 
 impl DINode {
-    pub fn new(nid: u64, bid: u64) -> Arc<Self> {
-        Arc::new(Self { nid, bid })
+    pub fn new(trans: Arc<dyn Transport>, nid: u64, bid: u64) -> Arc<Self> {
+        Arc::new(Self { trans, nid, bid })
     }
 }
 

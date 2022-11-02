@@ -6,11 +6,11 @@ use std::{
     usize,
 };
 
-pub trait Transport {
-    fn nid(&mut self) -> u64;
-    fn len(&mut self) -> u64;
-    fn get(&mut self, nid: u64, bid: u64, buf: &mut [u8]) -> std::io::Result<usize>;
-    fn set(&mut self, nid: u64, bid: u64, buf: &[u8]) -> std::io::Result<()>;
+pub trait Transport: Send + Sync {
+    fn nid(&self) -> u64;
+    fn len(&self) -> u64;
+    fn get(&self, nid: u64, bid: u64, buf: &mut [u8]) -> std::io::Result<usize>;
+    fn set(&self, nid: u64, bid: u64, buf: &[u8]) -> std::io::Result<()>;
 }
 
 pub struct LoopbackTransport {
@@ -78,13 +78,13 @@ impl LoopbackTransport {
 }
 
 impl Transport for LoopbackTransport {
-    fn nid(&mut self) -> u64 {
+    fn nid(&self) -> u64 {
         self.nid
     }
-    fn len(&mut self) -> u64 {
+    fn len(&self) -> u64 {
         self.len
     }
-    fn get(&mut self, nid: u64, bid: u64, mut buf: &mut [u8]) -> std::io::Result<usize> {
+    fn get(&self, nid: u64, bid: u64, mut buf: &mut [u8]) -> std::io::Result<usize> {
         if nid == self.nid {
             if let Some(msg) = self.store.lock().unwrap().get(&bid) {
                 buf.write(&msg)
@@ -124,7 +124,7 @@ impl Transport for LoopbackTransport {
             Ok(len)
         }
     }
-    fn set(&mut self, nid: u64, bid: u64, buf: &[u8]) -> std::io::Result<()> {
+    fn set(&self, nid: u64, bid: u64, buf: &[u8]) -> std::io::Result<()> {
         if nid == self.nid {
             self.store.lock().unwrap().insert(bid, buf.to_vec());
             Ok(())
