@@ -59,6 +59,7 @@ impl LoopbackTransport {
                             let len = u64::from_be_bytes(len);
                             let mut buf = vec![0u8; len as usize];
                             stream.read_exact(&mut buf).unwrap();
+                            store.lock().unwrap().insert(bid, buf);
                             stream.write_all(&0u64.to_be_bytes()).unwrap();
                         }
                         _ => unreachable!(),
@@ -152,7 +153,7 @@ impl Transport for LoopbackTransport {
 mod test {
     use crate::transport::{LoopbackTransport, Transport};
     #[test]
-    fn send() {
+    fn transport() {
         let mut t1 = LoopbackTransport::new(0, 2, 3000).unwrap();
         let mut t2 = LoopbackTransport::new(1, 2, 3000).unwrap();
         t1.set(0, 1, b"foo").unwrap();
