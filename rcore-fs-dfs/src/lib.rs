@@ -1,7 +1,9 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+
 use crate::transport::Transport;
+use alloc::sync::Arc;
 use rcore_fs::vfs::*;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 pub mod inode;
 pub mod transport;

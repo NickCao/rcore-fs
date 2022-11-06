@@ -1,11 +1,14 @@
-use crate::transport::{self, Transport};
+extern crate alloc;
+
+use crate::transport::Transport;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::sync::Arc;
+use alloc::vec;
+use alloc::vec::Vec;
 use core::any::Any;
 use rcore_fs::vfs::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::string::String;
-use std::sync::Arc;
-use std::usize;
 
 const MAX_INODE_SIZE: usize = 4096;
 
@@ -88,7 +91,7 @@ impl rcore_fs::vfs::INode for DINode {
     }
 
     fn get_entry(&self, id: usize) -> Result<String> {
-        println!("get_entry: {}", id);
+        log::debug!("get_entry: {}", id);
 
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
@@ -154,7 +157,7 @@ impl rcore_fs::vfs::INode for DINode {
     */
 
     fn metadata(&self) -> Result<Metadata> {
-        println!("metadata: {} {}", self.nid, self.bid);
+        log::debug!("metadata: {} {}", self.nid, self.bid);
 
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
@@ -191,7 +194,7 @@ impl rcore_fs::vfs::INode for DINode {
     */
 
     fn find(&self, name: &str) -> Result<Arc<dyn INode>> {
-        println!("find: {}", name);
+        log::debug!("find: {}", name);
 
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();

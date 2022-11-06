@@ -5,7 +5,7 @@ authors = ["Nick Cao <nickcao@nichi.co>"]
 edition = "2021"
 
 [dependencies]
-rcore-fs = { path = "../rcore-fs", features = ["std"] }
+rcore-fs = { path = "../rcore-fs" }
 rcore-fs-fuse = { path = "../rcore-fs-fuse", features = ["use_fuse"] }
 rcore-fs-ramfs = { path = "../rcore-fs-ramfs" }
 nix = "0.23"
@@ -15,3 +15,7 @@ fuse = "0.3"
 bincode = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 rand = "0.8.5"
+lock = { git = "https://github.com/DeathWish5/kernel-sync", rev = "8486b8" }
+
+[features]
+std = []
