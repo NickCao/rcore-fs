@@ -9,7 +9,7 @@ rcore-fs = { path = "../rcore-fs" }
 rcore-fs-fuse = { path = "../rcore-fs-fuse", features = ["use_fuse"], optional = true }
 rcore-fs-ramfs = { path = "../rcore-fs-ramfs", optional = true }
 nix = { version = "0.23", optional = true }
-log = "0.3.9"
+log = "0.4"
 structopt = { version = "0.3", optional = true }
 fuse = { version = "0.3", optional = true }
 bincode = "1.0"
