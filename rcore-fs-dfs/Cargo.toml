@@ -6,16 +6,16 @@ edition = "2021"
 
 [dependencies]
 rcore-fs = { path = "../rcore-fs" }
-rcore-fs-fuse = { path = "../rcore-fs-fuse", features = ["use_fuse"] }
-rcore-fs-ramfs = { path = "../rcore-fs-ramfs" }
-nix = "0.23"
+rcore-fs-fuse = { path = "../rcore-fs-fuse", features = ["use_fuse"], optional = true }
+rcore-fs-ramfs = { path = "../rcore-fs-ramfs", optional = true }
+nix = { version = "0.23", optional = true }
 log = "0.3.9"
-structopt = "0.3"
-fuse = "0.3"
+structopt = { version = "0.3", optional = true }
+fuse = { version = "0.3", optional = true }
 bincode = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-rand = "0.8.5"
+rand = { version = "0.8.5", optional = true }
 lock = { git = "https://github.com/DeathWish5/kernel-sync", rev = "8486b8" }
 
 [features]
-std = []
+std = [ "rcore-fs-fuse", "rcore-fs-ramfs", "nix", "structopt", "fuse", "rand" ]
