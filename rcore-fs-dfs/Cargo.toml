@@ -13,7 +13,7 @@ log = "0.4"
 structopt = { version = "0.3", optional = true }
 fuse = { version = "0.3", optional = true }
 bincode = "1.0"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", default-features = false, features = [ "derive" ] }
 rand = { version = "0.8.5", optional = true }
 lock = { git = "https://github.com/DeathWish5/kernel-sync", rev = "8486b8" }
 
