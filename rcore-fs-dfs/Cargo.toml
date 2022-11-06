@@ -12,7 +12,7 @@ nix = { version = "0.23", optional = true }
 log = "0.4"
 structopt = { version = "0.3", optional = true }
 fuse = { version = "0.3", optional = true }
-bincode = "1.0"
+bincode = { version = "2.0.0-rc", default-features = false, features = [ "derive", "alloc", "serde" ] }
 serde = { version = "1.0", default-features = false, features = [ "derive" ] }
 rand = { version = "0.8.5", optional = true }
 lock = { git = "https://github.com/DeathWish5/kernel-sync", rev = "8486b8" }

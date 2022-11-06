@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use log::log;
 use crate::transport::Transport;
 use alloc::string::String;
 use alloc::string::ToString;
@@ -45,11 +44,14 @@ impl DINode {
                 .set(
                     nid,
                     bid,
-                    &bincode::serialize(&DMetadata {
-                        mode: 0o777,
-                        type_: DFileType::Dir,
-                        entries: vec![],
-                    })
+                    &bincode::serde::encode_to_vec(
+                        &DMetadata {
+                            mode: 0o777,
+                            type_: DFileType::Dir,
+                            entries: vec![],
+                        },
+                        bincode::config::legacy(),
+                    )
                     .unwrap(),
                 )
                 .unwrap();
@@ -96,7 +98,8 @@ impl rcore_fs::vfs::INode for DINode {
 
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
-        let meta: DMetadata = bincode::deserialize(&buf[..n]).unwrap();
+        let (meta, _): (DMetadata, _) =
+            bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
 
         if meta.type_ != DFileType::Dir {
             return Err(FsError::NotDir);
@@ -130,25 +133,33 @@ impl rcore_fs::vfs::INode for DINode {
             .set(
                 nid,
                 bid,
-                &bincode::serialize(&DMetadata {
-                    mode: mode as u16,
-                    type_: match type_ {
-                        FileType::Dir => DFileType::Dir,
-                        FileType::File => DFileType::File,
-                        _ => unimplemented!(),
+                &bincode::serde::encode_to_vec(
+                    &DMetadata {
+                        mode: mode as u16,
+                        type_: match type_ {
+                            FileType::Dir => DFileType::Dir,
+                            FileType::File => DFileType::File,
+                            _ => unimplemented!(),
+                        },
+                        entries: vec![],
                     },
-                    entries: vec![],
-                })
+                    bincode::config::legacy(),
+                )
                 .unwrap(),
             )
             .unwrap();
 
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
-        let mut meta: DMetadata = bincode::deserialize(&buf[..n]).unwrap();
+        let (mut meta, _): (DMetadata, _) =
+            bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
         meta.entries.push((name.to_string(), (nid, bid)));
         self.trans
-            .set(self.nid, self.bid, &bincode::serialize(&meta).unwrap())
+            .set(
+                self.nid,
+                self.bid,
+                &bincode::serde::encode_to_vec(&meta, bincode::config::legacy()).unwrap(),
+            )
             .unwrap();
         Ok(DINode::new(self.trans.clone(), nid, bid))
     }
@@ -162,7 +173,8 @@ impl rcore_fs::vfs::INode for DINode {
 
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
-        let meta: DMetadata = bincode::deserialize(&buf[..n]).unwrap();
+        let (mut meta, _): (DMetadata, _) =
+            bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
 
         Ok(Metadata {
             dev: 0,
@@ -199,7 +211,8 @@ impl rcore_fs::vfs::INode for DINode {
 
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
-        let meta: DMetadata = bincode::deserialize(&buf[..n]).unwrap();
+        let (mut meta, _): (DMetadata, _) =
+            bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
 
         if meta.type_ != DFileType::Dir {
             return Err(FsError::NotDir);
