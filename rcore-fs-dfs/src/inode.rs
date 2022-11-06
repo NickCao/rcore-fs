@@ -1,5 +1,6 @@
 extern crate alloc;
 
+use log::log;
 use crate::transport::Transport;
 use alloc::string::String;
 use alloc::string::ToString;
