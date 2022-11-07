@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(int_roundings)]
 extern crate alloc;
 
 use crate::transport::Transport;

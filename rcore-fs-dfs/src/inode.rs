@@ -6,11 +6,14 @@ use alloc::string::ToString;
 use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
+use bincode::config::legacy;
+use bincode::serde::{decode_from_slice, encode_to_vec};
 use core::any::Any;
 use rcore_fs::vfs::*;
 use serde::{Deserialize, Serialize};
 
 const MAX_INODE_SIZE: usize = 4096;
+const BLOCK_SIZE: usize = 512;
 
 pub struct DINode {
     trans: Arc<dyn Transport>,
@@ -35,6 +38,7 @@ pub struct DMetadata {
     pub mode: u16,
     pub entries: Vec<(String, (u64, u64))>,
     pub blocks: Vec<(u64, u64)>,
+    pub size: usize,
 }
 
 impl DINode {
@@ -50,14 +54,34 @@ impl DINode {
                             mode: 0o777,
                             type_: DFileType::Dir,
                             entries: vec![],
+                            blocks: vec![],
+                            size: 0,
                         },
-                        bincode::config::legacy(),
+                        legacy(),
                     )
                     .unwrap(),
                 )
                 .unwrap();
         }
         Arc::new(Self { trans, nid, bid })
+    }
+
+    pub fn read<V>(&self, f: impl FnOnce(&DMetadata) -> V) -> Result<V> {
+        let mut buf = vec![0u8; MAX_INODE_SIZE];
+        let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
+        let (meta, _): (DMetadata, _) = decode_from_slice(&buf[..n], legacy()).unwrap();
+        Ok(f(&meta))
+    }
+
+    pub fn modify<V>(&self, f: impl FnOnce(&mut DMetadata) -> V) -> Result<V> {
+        let mut buf = vec![0u8; MAX_INODE_SIZE];
+        let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
+        let (mut meta, _): (DMetadata, _) = decode_from_slice(&buf[..n], legacy()).unwrap();
+        let v = f(&mut meta);
+        self.trans
+            .set(self.nid, self.bid, &encode_to_vec(&meta, legacy()).unwrap())
+            .unwrap();
+        Ok(v)
     }
 }
 
@@ -66,12 +90,59 @@ impl rcore_fs::vfs::INode for DINode {
        Local operations
     */
 
-    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize> {
-        unimplemented!()
+    fn read_at(&self, offset: usize, dbuf: &mut [u8]) -> Result<usize> {
+        let mut buf = vec![0u8; MAX_INODE_SIZE];
+        let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
+        let (meta, _): (DMetadata, _) =
+            bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
+        let blk = offset.div_floor(BLOCK_SIZE);
+        let off = offset % BLOCK_SIZE;
+        if blk > meta.blocks.len() {
+            return Err(FsError::InvalidParam);
+        }
+        let (bnid, bbid) = meta.blocks[blk];
+        let len = self.trans.get(bnid, bbid, &mut buf).unwrap();
+        assert_eq!(len, BLOCK_SIZE);
+        let avail = if (len - off) < dbuf.len() {
+            len - off
+        } else {
+            dbuf.len()
+        };
+        dbuf[..avail].copy_from_slice(&buf[off..off + avail]);
+        Ok(avail)
     }
 
-    fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize> {
-        unimplemented!()
+    fn write_at(&self, offset: usize, dbuf: &[u8]) -> Result<usize> {
+        let mut buf = vec![0u8; MAX_INODE_SIZE];
+        let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
+        let (mut meta, _): (DMetadata, _) =
+            bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
+        let blk = offset.div_floor(BLOCK_SIZE);
+        let off = offset % BLOCK_SIZE;
+        while meta.blocks.len() <= blk {
+            let bb = self.trans.next();
+            self.trans.set(self.nid, bb, &[0u8; BLOCK_SIZE]).unwrap();
+            meta.blocks.push((self.nid, bb));
+        }
+
+        let (bnid, bbid) = meta.blocks[blk];
+        let len = self.trans.get(bnid, bbid, &mut buf).unwrap();
+        assert_eq!(len, BLOCK_SIZE);
+        let avail = if (len - off) < dbuf.len() {
+            len - off
+        } else {
+            dbuf.len()
+        };
+        buf[off..off + avail].copy_from_slice(&dbuf[..avail]);
+        self.trans.set(bnid, bbid, &buf[..BLOCK_SIZE]).unwrap();
+        self.trans
+            .set(
+                self.nid,
+                self.bid,
+                &bincode::serde::encode_to_vec(&meta, bincode::config::legacy()).unwrap(),
+            )
+            .unwrap();
+        Ok(avail)
     }
 
     fn sync_all(&self) -> Result<()> {
@@ -83,7 +154,7 @@ impl rcore_fs::vfs::INode for DINode {
     }
 
     fn resize(&self, len: usize) -> Result<()> {
-        unimplemented!()
+        self.modify(|mut meta| meta.size = len)
     }
 
     fn mmap(&self, area: MMapArea) -> Result<()> {
@@ -143,6 +214,8 @@ impl rcore_fs::vfs::INode for DINode {
                             _ => unimplemented!(),
                         },
                         entries: vec![],
+                        blocks: vec![],
+                        size: 0,
                     },
                     bincode::config::legacy(),
                 )
