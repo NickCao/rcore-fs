@@ -91,6 +91,7 @@ impl rcore_fs::vfs::INode for DINode {
     */
 
     fn read_at(&self, offset: usize, dbuf: &mut [u8]) -> Result<usize> {
+        log::debug!("read_at: {} {}", offset, dbuf.len());
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
         let (meta, _): (DMetadata, _) =
@@ -113,36 +114,33 @@ impl rcore_fs::vfs::INode for DINode {
     }
 
     fn write_at(&self, offset: usize, dbuf: &[u8]) -> Result<usize> {
-        let mut buf = vec![0u8; MAX_INODE_SIZE];
-        let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
-        let (mut meta, _): (DMetadata, _) =
-            bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
-        let blk = offset.div_floor(BLOCK_SIZE);
-        let off = offset % BLOCK_SIZE;
-        while meta.blocks.len() <= blk {
-            let bb = self.trans.next();
-            self.trans.set(self.nid, bb, &[0u8; BLOCK_SIZE]).unwrap();
-            meta.blocks.push((self.nid, bb));
-        }
+        log::debug!("write_at: {} {}", offset, dbuf.len());
+        self.modify(|meta| {
+            let blk = offset.div_floor(BLOCK_SIZE);
+            let off = offset % BLOCK_SIZE;
 
-        let (bnid, bbid) = meta.blocks[blk];
-        let len = self.trans.get(bnid, bbid, &mut buf).unwrap();
-        assert_eq!(len, BLOCK_SIZE);
-        let avail = if (len - off) < dbuf.len() {
-            len - off
-        } else {
-            dbuf.len()
-        };
-        buf[off..off + avail].copy_from_slice(&dbuf[..avail]);
-        self.trans.set(bnid, bbid, &buf[..BLOCK_SIZE]).unwrap();
-        self.trans
-            .set(
-                self.nid,
-                self.bid,
-                &bincode::serde::encode_to_vec(&meta, bincode::config::legacy()).unwrap(),
-            )
-            .unwrap();
-        Ok(avail)
+            while meta.blocks.len() <= blk {
+                let bb = self.trans.next();
+                self.trans.set(self.nid, bb, &[0u8; BLOCK_SIZE]).unwrap();
+                meta.blocks.push((self.nid, bb));
+            }
+
+            let (bnid, bbid) = meta.blocks[blk];
+            let mut buf = [0u8; BLOCK_SIZE];
+            let len = self.trans.get(bnid, bbid, &mut buf).unwrap();
+            assert_eq!(len, BLOCK_SIZE);
+            let avail = if (len - off) < dbuf.len() {
+                len - off
+            } else {
+                dbuf.len()
+            };
+            if meta.size < offset + avail {
+                meta.size = offset + avail;
+            }
+            buf[off..off + avail].copy_from_slice(&dbuf[..avail]);
+            self.trans.set(bnid, bbid, &buf[..BLOCK_SIZE]).unwrap();
+            avail
+        })
     }
 
     fn sync_all(&self) -> Result<()> {
@@ -191,7 +189,11 @@ impl rcore_fs::vfs::INode for DINode {
     }
 
     fn poll(&self) -> Result<PollStatus> {
-        unimplemented!()
+        Ok(PollStatus {
+            read: true,
+            write: true,
+            error: false,
+        })
     }
 
     fn as_any_ref(&self) -> &dyn Any {
@@ -250,10 +252,12 @@ impl rcore_fs::vfs::INode for DINode {
         let (mut meta, _): (DMetadata, _) =
             bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
 
+        log::debug!("{:?}", meta);
+
         Ok(Metadata {
             dev: 0,
             inode: self.bid as usize, // synth a better inode number
-            size: 0,
+            size: meta.size,
             blk_size: 0,
             blocks: meta.blocks.len(),
             atime: Timespec { sec: 0, nsec: 0 },

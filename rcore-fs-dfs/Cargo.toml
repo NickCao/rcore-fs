@@ -16,6 +16,7 @@ bincode = { version = "2.0.0-rc", default-features = false, features = [ "derive
 serde = { version = "1.0", default-features = false, features = [ "derive" ] }
 rand = { version = "0.8.5", optional = true }
 lock = { git = "https://github.com/DeathWish5/kernel-sync", rev = "8486b8" }
+simple_logger = { version = "4", optional = true }
 
 [features]
-std = [ "rcore-fs-fuse", "rcore-fs-ramfs", "nix", "structopt", "fuse", "rand" ]
+std = [ "rcore-fs-fuse", "rcore-fs-ramfs", "nix", "structopt", "fuse", "rand", "simple_logger" ]
