@@ -199,7 +199,7 @@ impl rcore_fs::vfs::INode for DINode {
     }
 
     fn set_metadata(&self, metadata: &Metadata) -> Result<()> {
-        unimplemented!()
+        Ok(())
     }
 
     /*

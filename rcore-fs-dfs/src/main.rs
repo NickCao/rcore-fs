@@ -13,11 +13,13 @@ fn main() {
             /// Target directory
             #[structopt(parse(from_os_str))]
             dir: PathBuf,
+            #[structopt()]
+            idx: usize,
         }
 
         let opt = Opt::from_args();
         let store = ramfs::RamFS::new();
-        let trans = LoopbackTransport::new(0, 1, 3000).unwrap();
+        let trans = LoopbackTransport::new(opt.idx as u64, 1, 3000).unwrap();
         let fs = dfs::DFS::new(Arc::new(trans), store);
         fuse::mount(VfsFuse::new(fs), &opt.dir, &[]).expect("failed to mount fs");
     }
