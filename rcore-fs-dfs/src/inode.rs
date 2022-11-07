@@ -21,7 +21,7 @@ pub struct DINode {
     bid: u64,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub enum DFileType {
     File,
     Dir,
@@ -66,14 +66,14 @@ impl DINode {
         Arc::new(Self { trans, nid, bid })
     }
 
-    pub fn read<V>(&self, f: impl FnOnce(&DMetadata) -> V) -> Result<V> {
+    pub fn read<V>(&self, f: impl FnOnce(&DMetadata) -> Result<V>) -> Result<V> {
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
         let (meta, _): (DMetadata, _) = decode_from_slice(&buf[..n], legacy()).unwrap();
-        Ok(f(&meta))
+        f(&meta)
     }
 
-    pub fn modify<V>(&self, f: impl FnOnce(&mut DMetadata) -> V) -> Result<V> {
+    pub fn modify<V>(&self, f: impl FnOnce(&mut DMetadata) -> Result<V>) -> Result<V> {
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
         let (mut meta, _): (DMetadata, _) = decode_from_slice(&buf[..n], legacy()).unwrap();
@@ -81,7 +81,7 @@ impl DINode {
         self.trans
             .set(self.nid, self.bid, &encode_to_vec(&meta, legacy()).unwrap())
             .unwrap();
-        Ok(v)
+        v
     }
 }
 
@@ -139,7 +139,7 @@ impl rcore_fs::vfs::INode for DINode {
             }
             buf[off..off + avail].copy_from_slice(&dbuf[..avail]);
             self.trans.set(bnid, bbid, &buf[..BLOCK_SIZE]).unwrap();
-            avail
+            Ok(avail)
         })
     }
 
@@ -152,14 +152,17 @@ impl rcore_fs::vfs::INode for DINode {
     }
 
     fn resize(&self, len: usize) -> Result<()> {
-        self.modify(|mut meta| meta.size = len)
+        self.modify(|mut meta| {
+            meta.size = len;
+            Ok(())
+        })
     }
 
-    fn mmap(&self, area: MMapArea) -> Result<()> {
+    fn mmap(&self, _area: MMapArea) -> Result<()> {
         unimplemented!()
     }
 
-    fn io_control(&self, cmd: u32, data: usize) -> Result<usize> {
+    fn io_control(&self, _cmd: u32, _data: usize) -> Result<usize> {
         unimplemented!()
     }
 
@@ -249,7 +252,7 @@ impl rcore_fs::vfs::INode for DINode {
 
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
-        let (mut meta, _): (DMetadata, _) =
+        let (meta, _): (DMetadata, _) =
             bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
 
         log::debug!("{:?}", meta);
@@ -276,7 +279,7 @@ impl rcore_fs::vfs::INode for DINode {
         })
     }
 
-    fn set_metadata(&self, metadata: &Metadata) -> Result<()> {
+    fn set_metadata(&self, _metadata: &Metadata) -> Result<()> {
         Ok(())
     }
 
@@ -287,37 +290,34 @@ impl rcore_fs::vfs::INode for DINode {
     fn find(&self, name: &str) -> Result<Arc<dyn INode>> {
         log::debug!("find: {}", name);
 
-        let mut buf = vec![0u8; MAX_INODE_SIZE];
-        let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
-        let (mut meta, _): (DMetadata, _) =
-            bincode::serde::decode_from_slice(&buf[..n], bincode::config::legacy()).unwrap();
+        Ok(self.read(|meta| {
+            if meta.type_ != DFileType::Dir {
+                return Err(FsError::NotDir);
+            }
 
-        if meta.type_ != DFileType::Dir {
-            return Err(FsError::NotDir);
-        }
-
-        match name {
-            "." => Ok(DINode::new(self.trans.clone(), self.nid, self.bid)),
-            ".." => Ok(DINode::new(self.trans.clone(), 0, 0)), // FIXME
-            name => {
-                if let Some(ent) = meta.entries.iter().find(|(n, _)| n == name) {
-                    Ok(DINode::new(self.trans.clone(), ent.1 .0, ent.1 .1))
-                } else {
-                    Err(FsError::EntryNotFound)
+            match name {
+                "." => Ok(DINode::new(self.trans.clone(), self.nid, self.bid)),
+                ".." => Ok(DINode::new(self.trans.clone(), 0, 0)), // FIXME
+                name => {
+                    if let Some(ent) = meta.entries.iter().find(|(n, _)| n == name) {
+                        Ok(DINode::new(self.trans.clone(), ent.1 .0, ent.1 .1))
+                    } else {
+                        Err(FsError::EntryNotFound)
+                    }
                 }
             }
-        }
+        })?)
     }
 
-    fn link(&self, name: &str, other: &Arc<dyn INode>) -> Result<()> {
+    fn link(&self, _name: &str, _other: &Arc<dyn INode>) -> Result<()> {
         unimplemented!()
     }
 
-    fn unlink(&self, name: &str) -> Result<()> {
+    fn unlink(&self, _name: &str) -> Result<()> {
         unimplemented!()
     }
 
-    fn move_(&self, old_name: &str, target: &Arc<dyn INode>, new_name: &str) -> Result<()> {
+    fn move_(&self, _old_name: &str, _target: &Arc<dyn INode>, _new_name: &str) -> Result<()> {
         unimplemented!()
     }
 
