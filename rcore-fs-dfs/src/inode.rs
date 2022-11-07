@@ -34,6 +34,7 @@ pub struct DMetadata {
     pub type_: DFileType,
     pub mode: u16,
     pub entries: Vec<(String, (u64, u64))>,
+    pub blocks: Vec<(u64, u64)>,
 }
 
 impl DINode {
@@ -181,7 +182,7 @@ impl rcore_fs::vfs::INode for DINode {
             inode: self.bid as usize, // synth a better inode number
             size: 0,
             blk_size: 0,
-            blocks: 0,
+            blocks: meta.blocks.len(),
             atime: Timespec { sec: 0, nsec: 0 },
             mtime: Timespec { sec: 0, nsec: 0 },
             ctime: Timespec { sec: 0, nsec: 0 },
