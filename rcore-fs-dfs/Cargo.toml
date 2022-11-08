@@ -7,7 +7,6 @@ edition = "2021"
 [dependencies]
 rcore-fs = { path = "../rcore-fs" }
 rcore-fs-fuse = { path = "../rcore-fs-fuse", features = ["use_fuse"], optional = true }
-rcore-fs-ramfs = { path = "../rcore-fs-ramfs", optional = true }
 nix = { version = "0.23", optional = true }
 log = "0.4"
 structopt = { version = "0.3", optional = true }
@@ -19,4 +18,4 @@ lock = { git = "https://github.com/DeathWish5/kernel-sync", rev = "8486b8" }
 simple_logger = { version = "4", optional = true }
 
 [features]
-std = [ "rcore-fs-fuse", "rcore-fs-ramfs", "nix", "structopt", "fuse", "rand", "simple_logger" ]
+std = [ "rcore-fs-fuse", "nix", "structopt", "fuse", "rand", "simple_logger" ]
