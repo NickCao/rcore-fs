@@ -186,7 +186,7 @@ impl rcore_fs::vfs::INode for DINode {
             0 => Ok(".".to_string()),
             1 => Ok("..".to_string()),
             id => {
-                if let Some(ent) = meta.entries.iter().nth(id - 2) {
+                if let Some(ent) = meta.entries.get(id - 2) {
                     Ok(ent.0.to_string())
                 } else {
                     Err(FsError::EntryNotFound)

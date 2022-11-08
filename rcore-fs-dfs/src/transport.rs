@@ -116,7 +116,8 @@ pub mod loopback {
                 let mut stream = std::net::TcpStream::connect(SocketAddr::V4(SocketAddrV4::new(
                     Ipv4Addr::new(127, 0, 0, 1),
                     self.base + nid as u16,
-                ))).unwrap();
+                )))
+                .unwrap();
                 // opcode 0 for get
                 stream.write_all(&0u64.to_be_bytes()).unwrap();
                 // bid
@@ -144,7 +145,8 @@ pub mod loopback {
                 let mut stream = std::net::TcpStream::connect(SocketAddr::V4(SocketAddrV4::new(
                     Ipv4Addr::new(127, 0, 0, 1),
                     self.base + nid as u16,
-                ))).unwrap();
+                )))
+                .unwrap();
                 // opcode 1 for set
                 stream.write_all(&1u64.to_be_bytes()).unwrap();
                 // bid
