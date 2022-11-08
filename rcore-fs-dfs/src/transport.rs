@@ -1,7 +1,8 @@
+//! Abstraction for underlying communication and storage
 extern crate alloc;
 use alloc::string::String;
 
-/// Abstraction for underlying communication and storage
+/// Abstract transport
 pub trait Transport: Send + Sync {
     /// get self node id
     fn nid(&self) -> u64;

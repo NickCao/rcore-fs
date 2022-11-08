@@ -1,3 +1,5 @@
+//! Implementation of distributed inode
+
 extern crate alloc;
 
 use crate::transport::Transport;
@@ -15,6 +17,7 @@ use serde::{Deserialize, Serialize};
 const MAX_INODE_SIZE: usize = 4096;
 const BLOCK_SIZE: usize = 512;
 
+/// Distributed inode
 pub struct DINode {
     trans: Arc<dyn Transport>,
     nid: u64,
@@ -22,7 +25,7 @@ pub struct DINode {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-pub enum DFileType {
+enum DFileType {
     File,
     Dir,
     SymLink,
@@ -33,7 +36,7 @@ pub enum DFileType {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct DMetadata {
+struct DMetadata {
     pub type_: DFileType,
     pub mode: u16,
     pub entries: Vec<(String, (u64, u64))>,
@@ -42,6 +45,7 @@ pub struct DMetadata {
 }
 
 impl DINode {
+    /// create DINode from transport, nid and bid
     pub fn new(trans: Arc<dyn Transport>, nid: u64, bid: u64) -> Arc<Self> {
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         if nid == 0 && bid == 0 && trans.get(nid, bid, &mut buf).is_err() {
@@ -66,14 +70,14 @@ impl DINode {
         Arc::new(Self { trans, nid, bid })
     }
 
-    pub fn read<V>(&self, f: impl FnOnce(&DMetadata) -> Result<V>) -> Result<V> {
+    fn read<V>(&self, f: impl FnOnce(&DMetadata) -> Result<V>) -> Result<V> {
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
         let (meta, _): (DMetadata, _) = decode_from_slice(&buf[..n], legacy()).unwrap();
         f(&meta)
     }
 
-    pub fn modify<V>(&self, f: impl FnOnce(&mut DMetadata) -> Result<V>) -> Result<V> {
+    fn modify<V>(&self, f: impl FnOnce(&mut DMetadata) -> Result<V>) -> Result<V> {
         let mut buf = vec![0u8; MAX_INODE_SIZE];
         let n = self.trans.get(self.nid, self.bid, &mut buf).unwrap();
         let (mut meta, _): (DMetadata, _) = decode_from_slice(&buf[..n], legacy()).unwrap();
