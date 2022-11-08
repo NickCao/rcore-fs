@@ -1,15 +1,22 @@
 extern crate alloc;
 use alloc::string::String;
 
+/// Abstraction for underlying communication and storage
 pub trait Transport: Send + Sync {
+    /// get self node id
     fn nid(&self) -> u64;
+    /// get total number of nodes
     fn len(&self) -> u64;
+    /// get block by block id
     fn get(&self, nid: u64, bid: u64, buf: &mut [u8]) -> Result<usize, String>;
+    /// set block by block id
     fn set(&self, nid: u64, bid: u64, buf: &[u8]) -> Result<(), String>;
+    /// allocate an unused block id
     fn next(&self) -> u64;
 }
 
 #[cfg(feature = "std")]
+/// Loopback transport
 pub mod loopback {
     use crate::Transport;
     use alloc::string::String;
@@ -22,6 +29,7 @@ pub mod loopback {
         usize,
     };
 
+    /// A transport based on TCP over loopback interface
     pub struct LoopbackTransport {
         nid: u64,
         len: u64,
@@ -31,6 +39,8 @@ pub mod loopback {
     }
 
     impl LoopbackTransport {
+        /// create transport from nid, len and base port number,
+        /// node ports are allocated sequentially
         pub fn new(nid: u64, len: u64, base: u16) -> Result<Self, String> {
             let listener = std::net::TcpListener::bind(SocketAddr::V4(SocketAddrV4::new(
                 Ipv4Addr::new(127, 0, 0, 1),
