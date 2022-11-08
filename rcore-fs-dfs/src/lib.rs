@@ -9,30 +9,37 @@ use rcore_fs::vfs::*;
 pub mod inode;
 pub mod transport;
 
+/// Distributed filesystem
 pub struct DFS {
     trans: Arc<dyn Transport>,
-    store: Arc<dyn FileSystem>,
 }
 
 impl FileSystem for DFS {
     fn sync(&self) -> Result<()> {
-        // FIXME
-        self.store.sync()
+        Ok(())
     }
 
     fn root_inode(&self) -> Arc<dyn INode> {
-        // FIXME
         inode::DINode::new(self.trans.clone(), 0, 0)
     }
 
     fn info(&self) -> FsInfo {
-        // FIXME
-        self.store.info()
+        FsInfo {
+            bsize: 0,
+            frsize: 0,
+            blocks: 0,
+            bfree: 0,
+            bavail: 0,
+            files: 0,
+            ffree: 0,
+            namemax: 0,
+        }
     }
 }
 
 impl DFS {
-    pub fn new(trans: Arc<dyn Transport>, store: Arc<dyn FileSystem>) -> Arc<DFS> {
-        Arc::new(DFS { trans, store })
+    /// create DFS from transport
+    pub fn new(trans: Arc<dyn Transport>) -> Arc<DFS> {
+        Arc::new(DFS { trans })
     }
 }
