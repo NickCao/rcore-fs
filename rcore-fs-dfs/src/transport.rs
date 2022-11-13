@@ -1,4 +1,34 @@
 //! Abstraction for underlying communication and storage
+//!
+//! For a distributed filesystem, communication and storage
+//! are equally important, and in many times, closely related.
+//! In order to utilize the full potential of RDMA capable networks
+//! and NVME drives, the abstraction is designed around the concept
+//! of Remote Memory Access and NVME-like block storage, with graceful
+//! fallback when these features are not available.
+//!
+//! In this abstraction, every node is assigned a unique node id
+//! of 64 bits, and each node exposes a virtual address space of
+//! additional 64 bits. Together, the 128 bit address uniquely
+//! identifies a single block of storage, the address length is
+//! carefully designed so that it could fit into an IPv6 address,
+//! allowing the co-design of networking and storage.
+//!
+//! On each block, two operations MUST be implemented, get and set,
+//! or, read and write. These operations MUST atomically observe or modify
+//! the content of the specified block. And for easier implementation
+//! of distributed filesystems around this abstraction, two additional
+//! operations SHOULD be implemented, discard and CAS. Discard marks a
+//! block as no longer needed, so that it's backing storage can be
+//! garbage collected, in the absence of the discard operation, blocks
+//! of all zero MAY be treated as empty blocks and discarded, however
+//! it MUST be ensured that new blocked are initialized with zeros on
+//! first access. CAS denotes compare and swap, it ensures data
+//! consistency when a block is concurrently modified by multiple nodes.
+//!
+//! Above the abstraction, the whole communication and storage system can
+//! be seen as a huge NVME drive, with unique characteristics reguarding
+//! the performance and consistency of accessing local or remote blocks.
 extern crate alloc;
 use alloc::string::String;
 

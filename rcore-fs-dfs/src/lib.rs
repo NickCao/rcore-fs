@@ -1,3 +1,18 @@
+//! Distributed filesystem
+//!
+//! Distributed filesystems has been around for a long time,
+//! from the 9pfs protocol to NFS, GlusterFS and CEPH.
+//! However many of these implementations are deeply tied
+//! with specific networking or storage systems, limiting
+//! their application and deployment. And they are mostly
+//! designed from ground up, missing out from the recent
+//! advancements in filesystem design.
+//!
+//! Our goal is to have a common abstraction of the
+//! networking and storage systems, on which distributed
+//! filesytems can build upon, together with a reference
+//! implementation that showcases it's feasibility.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(int_roundings)]
 extern crate alloc;

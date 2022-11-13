@@ -16,7 +16,7 @@ fn main() {
             idx: usize,
         }
 
-        simple_logger::SimpleLogger::new().init().unwrap();
+        // simple_logger::SimpleLogger::new().init().unwrap();
 
         let opt = Opt::from_args();
         let trans = LoopbackTransport::new(opt.idx as u64, 1, 3000).unwrap();
