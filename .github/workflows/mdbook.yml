@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
-      - run: sudo apt-get install -y libfuse2
+      - run: sudo apt-get install -y libfuse-dev
       - uses: actions-rs/cargo@v1
         with:
           command: doc
