@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["LoopbackTransport","A transport based on TCP over loopback interface"]]};

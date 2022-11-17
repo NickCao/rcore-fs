@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":[["inode","Implementation of distributed inode"],["transport","Abstraction for underlying communication and storage"]],"struct":[["DFS","Distributed filesystem"]]};
